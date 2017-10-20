@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.26730.16
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelegramBots", "TelegramBots\TelegramBots.csproj", "{38AD93C0-069C-438E-9AF3-C9D5E72EC5AD}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Banane9.TelegramBots.ArtChannelBot", "Banane9.TelegramBots.ArtChannelBot\Banane9.TelegramBots.ArtChannelBot.csproj", "{5797F60A-A2DD-49C3-BF93-1522D6A6DC98}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -11,10 +11,10 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{38AD93C0-069C-438E-9AF3-C9D5E72EC5AD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{38AD93C0-069C-438E-9AF3-C9D5E72EC5AD}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{38AD93C0-069C-438E-9AF3-C9D5E72EC5AD}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{38AD93C0-069C-438E-9AF3-C9D5E72EC5AD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5797F60A-A2DD-49C3-BF93-1522D6A6DC98}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5797F60A-A2DD-49C3-BF93-1522D6A6DC98}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5797F60A-A2DD-49C3-BF93-1522D6A6DC98}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5797F60A-A2DD-49C3-BF93-1522D6A6DC98}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
