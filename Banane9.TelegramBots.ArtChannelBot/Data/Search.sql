@@ -1,3 +1,4 @@
+INSERT INTO ArtSearchResults
 SELECT
     Channels.ChannelId AS ChannelId,
     Channels.Name AS ChannelName,

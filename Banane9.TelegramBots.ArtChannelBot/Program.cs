@@ -18,7 +18,7 @@ namespace Banane9.TelegramBots.ArtChannelBot
             Console.WriteLine("Query: " + e.InlineQuery.Query);
             var client = (TelegramBotClient)sender;
 
-            var query = e.InlineQuery.Query.Split(' ');
+            var query = e.InlineQuery.Query.Split(',').Where(t => !string.IsNullOrWhiteSpace(t)).Select(t => t.Trim());
             var x = 0;
 
             var result = database.SearchArt(query).Select(async artResult => new InlineQueryResultCachedPhoto
@@ -52,8 +52,8 @@ namespace Banane9.TelegramBots.ArtChannelBot
                     if (e.Update.EditedChannelPost.Photo == null)
                         break;
 
-                    var uChannel = database.GetChannel(e.Update.ChannelPost.Chat);
-                    database.UpdateArt(uChannel, e.Update.ChannelPost);
+                    var uChannel = database.GetChannel(e.Update.EditedChannelPost.Chat);
+                    database.UpdateArt(uChannel, e.Update.EditedChannelPost);
                     break;
             }
         }

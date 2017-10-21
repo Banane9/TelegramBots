@@ -4,6 +4,7 @@ using System.Data.SQLite;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using Telegram.Bot.Types;
 
 namespace Banane9.TelegramBots.ArtChannelBot.Data
@@ -17,14 +18,17 @@ namespace Banane9.TelegramBots.ArtChannelBot.Data
         private readonly SQLiteCommand addCharacterArtCommand;
         private readonly SQLiteCommand addCharacterCommand;
         private readonly SQLiteCommand addTagCommand;
+        private readonly SQLiteCommand clearArtSearchResultsCommand;
         private readonly SQLiteConnection connection;
-
         private readonly SQLiteCommand getArtistCommand;
+        private readonly SQLiteCommand getArtSearchResultsCommand;
         private readonly SQLiteCommand getChannelCommand;
         private readonly SQLiteCommand getCharacterCommand;
         private readonly SQLiteCommand getTagCommand;
         private readonly SQLiteCommand getUserCommand;
         private readonly SQLiteCommand insertChannelCommand;
+        private readonly SQLiteCommand prepareArtSearchCommand;
+        private readonly SQLiteCommand removeArtCommand;
         private readonly SQLiteCommand searchCommand;
 
         public ArtDb(string name = "ArtDB.db3")
@@ -40,11 +44,19 @@ namespace Banane9.TelegramBots.ArtChannelBot.Data
                 cmd.ExecuteNonQuery();
             }
 
-            searchCommand = connection.CreateCommand();
+            prepareArtSearchCommand = connection.CreateCommand();
+            prepareArtSearchCommand.CommandText = "CREATE TEMPORARY TABLE IF NOT EXISTS ArtSearchResults (ChannelId INTEGER NOT NULL, ChannelName CHAR NOT NULL, ArtId INTEGER NOT NULL, MessageId INTEGER NOT NULL, FileId CHAR NOT NULL, ArtName CHAR NOT NULL);";
 
+            searchCommand = connection.CreateCommand();
             using (var asmStream = Assembly.GetExecutingAssembly().GetManifestResourceStream("Banane9.TelegramBots.ArtChannelBot.Data.Search.sql"))
             using (var reader = new StreamReader(asmStream))
                 searchCommand.CommandText = reader.ReadToEnd();
+
+            getArtSearchResultsCommand = connection.CreateCommand();
+            getArtSearchResultsCommand.CommandText = "SELECT * FROM ArtSearchResults GROUP BY ArtSearchResults.ArtId ORDER BY COUNT(ArtSearchResults.ArtId) DESC";
+
+            clearArtSearchResultsCommand = connection.CreateCommand();
+            clearArtSearchResultsCommand.CommandText = "DROP TABLE IF EXISTS ArtSearchResults";
 
             getChannelCommand = connection.CreateCommand();
             getChannelCommand.CommandText = "SELECT * FROM Channels WHERE (Channels.ChannelId = @channelId)";
@@ -56,34 +68,37 @@ namespace Banane9.TelegramBots.ArtChannelBot.Data
             getTagCommand.CommandText = "SELECT * FROM Tags WHERE (Tags.Name = @name)";
 
             addTagCommand = connection.CreateCommand();
-            addTagCommand.CommandText = "INSERT OR IGNORE INTO Tags (Name) VALUES (@name) --WHERE NOT EXISTS (SELECT 1 FROM Tags WHERE (Tags.Name = @name))";
+            addTagCommand.CommandText = "INSERT OR IGNORE INTO Tags (Name) VALUES (@name)";
 
             addArtTagCommand = connection.CreateCommand();
-            addArtTagCommand.CommandText = "INSERT OR IGNORE INTO ArtTags (ArtId, TagId) VALUES (@artId, @otherId) --WHERE NOT EXISTS (SELECT 1 FROM ArtTags WHERE (ArtTags.ArtId = @artId) AND (ArtTags.TagId = @otherId))";
+            addArtTagCommand.CommandText = "INSERT OR IGNORE INTO ArtTags (ArtId, TagId) VALUES (@artId, @otherId)";
 
             getArtistCommand = connection.CreateCommand();
             getArtistCommand.CommandText = "SELECT * FROM Artists WHERE (Artists.Name = @name)";
 
             addArtistCommand = connection.CreateCommand();
-            addArtistCommand.CommandText = "INSERT OR IGNORE INTO Artists (Name) VALUES (@name) --WHERE NOT EXISTS (SELECT 1 FROM Artists WHERE (Artists.Name = @name))";
+            addArtistCommand.CommandText = "INSERT OR IGNORE INTO Artists (Name) VALUES (@name)";
 
             addArtistPieceCommand = connection.CreateCommand();
-            addArtistPieceCommand.CommandText = "INSERT OR IGNORE INTO ArtistPieces (ArtId, ArtistId) VALUES (@artId, @otherId) --WHERE NOT EXISTS (SELECT 1 FROM ArtistPieces WHERE (ArtistPieces.ArtId = @artId) AND (ArtistPieces.ArtistId = @otherId))";
+            addArtistPieceCommand.CommandText = "INSERT OR IGNORE INTO ArtistPieces (ArtId, ArtistId) VALUES (@artId, @otherId)";
 
             getCharacterCommand = connection.CreateCommand();
             getCharacterCommand.CommandText = "SELECT * FROM Characters WHERE (Characters.Name = @name)";
 
             addCharacterCommand = connection.CreateCommand();
-            addCharacterCommand.CommandText = "INSERT OR IGNORE INTO Characters (Name) VALUES (@name) --WHERE NOT EXISTS (SELECT 1 FROM Characters WHERE (Characters.Name = @name))";
+            addCharacterCommand.CommandText = "INSERT OR IGNORE INTO Characters (Name) VALUES (@name)";
 
             addCharacterArtCommand = connection.CreateCommand();
-            addCharacterArtCommand.CommandText = "INSERT OR IGNORE INTO CharacterArt (ArtId, CharacterId) VALUES (@artId, @otherId) --WHERE NOT EXISTS (SELECT 1 FROM CharacterArt WHERE (CharacterArt.ArtId = @artId) AND (CharacterArt.CharacterId = @otherId))";
+            addCharacterArtCommand.CommandText = "INSERT OR IGNORE INTO CharacterArt (ArtId, CharacterId) VALUES (@artId, @otherId)";
 
             addArtCommand = connection.CreateCommand();
-            addArtCommand.CommandText = "INSERT OR IGNORE INTO Art (ChannelId, MessageId, FileId, Name, Rating) VALUES (@channelId, @messageId, @fileId, @name, @rating) --WHERE NOT EXISTS (SELECT 1 FROM Art WHERE (Art.ChannelId = @channelId) AND (Art.MessageId = @messageId))";
+            addArtCommand.CommandText = "INSERT OR IGNORE INTO Art (ChannelId, MessageId, FileId, Name, Rating) VALUES (@channelId, @messageId, @fileId, @name, @rating)";
+
+            removeArtCommand = connection.CreateCommand();
+            removeArtCommand.CommandText = "DELETE FROM Art WHERE (Art.ChannelId = @channelId) AND (Art.MessageId = @messageId)";
         }
 
-        public void AddArt(Channel channel, Message channelPost)
+        public void AddArt(Channel channel, Message channelPost, SQLiteTransaction transaction = null)
         {
             var details = new ArtworkDetails(channelPost.Caption);
 
@@ -94,72 +109,104 @@ namespace Banane9.TelegramBots.ArtChannelBot.Data
             addArtCommand.Parameters.AddWithValue("@name", details.Name);
             addArtCommand.Parameters.AddWithValue("@rating", details.Rating);
 
-            var transaction = connection.BeginTransaction();
-            if (addArtCommand.ExecuteNonQuery() == 0)
+            if (transaction == null)
+                Monitor.Enter(connection);
+
+            try
             {
+                transaction = transaction ?? connection.BeginTransaction();
+                if (addArtCommand.ExecuteNonQuery() == 0)
+                {
+                    transaction.Commit();
+                    return;
+                }
+
+                var artId = connection.LastInsertRowId;
+
+                foreach (var artist in details.Artists)
+                {
+                    var artistId = getDetail(getArtistCommand, addArtistCommand, artist);
+                    addDetailRelation(addArtistPieceCommand, artId, artistId);
+                }
+
+                foreach (var character in details.Characters)
+                {
+                    var charId = getDetail(getCharacterCommand, addCharacterCommand, character);
+                    addDetailRelation(addCharacterArtCommand, artId, charId);
+                }
+
+                foreach (var tag in details.Tags)
+                {
+                    var tagId = getDetail(getTagCommand, addTagCommand, tag);
+                    addDetailRelation(addArtTagCommand, artId, tagId);
+                }
+
                 transaction.Commit();
-                return;
             }
-
-            var artId = connection.LastInsertRowId;
-
-            foreach (var artist in details.Artists)
+            finally
             {
-                var artistId = getDetail(getArtistCommand, addArtistCommand, artist);
-                addDetailRelation(addArtistPieceCommand, artId, artistId);
+                Monitor.Exit(connection);
             }
-
-            foreach (var character in details.Characters)
-            {
-                var charId = getDetail(getCharacterCommand, addCharacterCommand, character);
-                addDetailRelation(addCharacterArtCommand, artId, charId);
-            }
-
-            foreach (var tag in details.Tags)
-            {
-                var tagId = getDetail(getTagCommand, addTagCommand, tag);
-                addDetailRelation(addArtTagCommand, artId, tagId);
-            }
-
-            transaction.Commit();
         }
 
         public Channel GetChannel(Chat chat)
         {
-            getChannelCommand.Reset();
-            getChannelCommand.Parameters.AddWithValue("@channelId", chat.Id);
-            var reader = getChannelCommand.ExecuteReader();
+            lock (connection)
+            {
+                getChannelCommand.Reset();
+                getChannelCommand.Parameters.AddWithValue("@channelId", chat.Id);
+                var reader = getChannelCommand.ExecuteReader();
 
-            if (reader.Read())
-                return new Channel(reader);
+                if (reader.Read())
+                    return new Channel(reader);
 
-            insertChannelCommand.Reset();
-            insertChannelCommand.Parameters.AddWithValue("@name", chat.Title);
-            insertChannelCommand.Parameters.AddWithValue("@channelId", chat.Id);
-            insertChannelCommand.ExecuteNonQuery();
+                insertChannelCommand.Reset();
+                insertChannelCommand.Parameters.AddWithValue("@name", chat.Title);
+                insertChannelCommand.Parameters.AddWithValue("@channelId", chat.Id);
+                insertChannelCommand.ExecuteNonQuery();
+            }
 
             return new Channel(connection.LastInsertRowId, chat.Title, chat.Id);
         }
 
         public IEnumerable<ArtSearchResult> SearchArt(IEnumerable<string> terms)
         {
-            // Add sorted dictionary with more appearances = higher?
-            foreach (var term in terms)
-            {
-                searchCommand.Reset();
-                searchCommand.Parameters.AddWithValue("@term", term + "%");
-                var reader = searchCommand.ExecuteReader();
+            SQLiteDataReader reader;
 
-                while (reader.Read())
+            lock (connection)
+            {
+                clearArtSearchResultsCommand.ExecuteNonQuery();
+                prepareArtSearchCommand.ExecuteNonQuery();
+
+                foreach (var term in terms)
                 {
-                    yield return new ArtSearchResult(reader);
+                    searchCommand.Reset();
+                    searchCommand.Parameters.AddWithValue("@term", term + "%");
+                    searchCommand.ExecuteNonQuery();
                 }
+
+                getArtSearchResultsCommand.Reset();
+                reader = getArtSearchResultsCommand.ExecuteReader();
+            }
+
+            while (reader.Read())
+            {
+                yield return new ArtSearchResult(reader);
             }
         }
 
-        internal void UpdateArt(Channel channel, Message channelPost)
+        public void UpdateArt(Channel channel, Message channelPost)
         {
-            throw new NotImplementedException();
+            removeArtCommand.Reset();
+            removeArtCommand.Parameters.AddWithValue("@channelId", channel.InternalId);
+            removeArtCommand.Parameters.AddWithValue("@messageId", channelPost.MessageId);
+
+            Monitor.Enter(connection);
+
+            var transaction = connection.BeginTransaction();
+            removeArtCommand.ExecuteNonQuery();
+
+            AddArt(channel, channelPost, transaction);
         }
 
         private void addDetailRelation(SQLiteCommand command, long artId, long otherId)

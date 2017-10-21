@@ -17,7 +17,7 @@ namespace Banane9.TelegramBots.ArtChannelBot.Data
 
         public ArtworkDetails(string message)
         {
-            var parts = message.Split(';').Select(p => p.Trim());
+            var parts = (message ?? "").Split(';').Select(p => p.Trim());
 
             foreach (var part in parts)
             {
