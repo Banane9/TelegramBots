@@ -12,16 +12,16 @@ WHERE EXISTS
         ArtId = Art.Id AND
         EXISTS (SELECT * FROM Tags
             	WHERE (ArtTags.TagId = Tags.Id)
-                AND (Tags.Name LIKE '?%')))
+                AND (Tags.Name LIKE @term)))
 OR EXISTS
     (SELECT ArtId FROM ArtistPieces WHERE
         ArtId = Art.Id AND
         EXISTS (SELECT * FROM Artists
             WHERE (ArtistPieces.ArtistId = Artists.Id)
-                AND (Artists.Name LIKE '?%')))
+                AND (Artists.Name LIKE @term)))
 OR EXISTS
     (SELECT ArtId FROM CharacterArt WHERE
         ArtId = Art.Id AND
         EXISTS (SELECT * FROM Characters
             WHERE (CharacterArt.CharacterId = Characters.Id)
-                AND (Characters.Name LIKE '?%')))
+                AND (Characters.Name LIKE @term)))
