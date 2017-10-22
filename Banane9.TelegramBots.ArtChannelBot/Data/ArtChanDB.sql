@@ -1,5 +1,3 @@
-
--- Table: Channels
 CREATE TABLE IF NOT EXISTS Channels ( 
     Id        INTEGER      PRIMARY KEY AUTOINCREMENT
                            NOT NULL
@@ -10,8 +8,6 @@ CREATE TABLE IF NOT EXISTS Channels (
                            UNIQUE 
 );
 
-
--- Table: Characters
 CREATE TABLE IF NOT EXISTS Characters ( 
     Id   INTEGER PRIMARY KEY AUTOINCREMENT
                  NOT NULL
@@ -21,8 +17,6 @@ CREATE TABLE IF NOT EXISTS Characters (
                  COLLATE 'NOCASE' 
 );
 
-
--- Table: Artists
 CREATE TABLE IF NOT EXISTS Artists ( 
     Id   INTEGER PRIMARY KEY AUTOINCREMENT
                  NOT NULL
@@ -32,8 +26,6 @@ CREATE TABLE IF NOT EXISTS Artists (
                  COLLATE 'NOCASE' 
 );
 
-
--- Table: Tags
 CREATE TABLE IF NOT EXISTS Tags ( 
     Id   INTEGER PRIMARY KEY AUTOINCREMENT
                  NOT NULL
@@ -43,29 +35,24 @@ CREATE TABLE IF NOT EXISTS Tags (
                  COLLATE 'NOCASE' 
 );
 
-
--- Table: Art
 CREATE TABLE IF NOT EXISTS Art ( 
-    Id        INTEGER PRIMARY KEY AUTOINCREMENT
-                      NOT NULL
-                      UNIQUE,
-    ChannelId INTEGER NOT NULL
-                      REFERENCES Channels ( Id ),
-    MessageId INTEGER NOT NULL,
-    FileId    CHAR    NOT NULL,
-    Name      CHAR    NOT NULL
-                      COLLATE 'NOCASE',
-    Rating    CHAR    NOT NULL
-                      COLLATE 'NOCASE',
-    UNIQUE(ChannelId, MessageId)
+    Id                  INTEGER PRIMARY KEY AUTOINCREMENT
+                                NOT NULL
+                                UNIQUE,
+    ChannelId           INTEGER NOT NULL
+                                REFERENCES Channels ( Id ),
+    FileId              CHAR    NOT NULL
+                                UNIQUE,
+    DetailMessageChatId INTEGER NOT NULL,
+    DetailMessageId     INTEGER NOT NULL,
+    Name                CHAR    NOT NULL
+                                COLLATE 'NOCASE',
+    Rating              CHAR    NOT NULL
+                                COLLATE 'NOCASE',
+    UNIQUE ( DetailMessageChatId, DetailMessageId ) 
 );
 
-
--- Table: ArtTags
 CREATE TABLE IF NOT EXISTS ArtTags ( 
-    Id    INTEGER PRIMARY KEY AUTOINCREMENT
-                  NOT NULL
-                  UNIQUE,
     ArtId INTEGER NOT NULL
                   REFERENCES Art ( Id ) ON DELETE CASCADE,
     TagId INTEGER NOT NULL
@@ -73,12 +60,7 @@ CREATE TABLE IF NOT EXISTS ArtTags (
     UNIQUE(ArtId, TagId)
 );
 
-
--- Table: ArtistPieces
 CREATE TABLE IF NOT EXISTS ArtistPieces ( 
-    Id       INTEGER PRIMARY KEY AUTOINCREMENT
-                     NOT NULL
-                     UNIQUE,
     ArtId    INTEGER NOT NULL
                      REFERENCES Art ( Id ) ON DELETE CASCADE,
     ArtistId INTEGER NOT NULL
@@ -86,12 +68,7 @@ CREATE TABLE IF NOT EXISTS ArtistPieces (
     UNIQUE(ArtId, ArtistId)
 );
 
-
--- Table: CharacterArt
 CREATE TABLE IF NOT EXISTS CharacterArt ( 
-    Id          INTEGER PRIMARY KEY AUTOINCREMENT
-                        NOT NULL
-                        UNIQUE,
     ArtId       INTEGER NOT NULL
                         REFERENCES Art ( Id ) ON DELETE CASCADE,
     CharacterId INTEGER NOT NULL
@@ -99,3 +76,18 @@ CREATE TABLE IF NOT EXISTS CharacterArt (
     UNIQUE(ArtId, CharacterId)
 );
 
+CREATE TABLE IF NOT EXISTS Users ( 
+    Id     INTEGER PRIMARY KEY AUTOINCREMENT
+                   NOT NULL
+                   UNIQUE,
+    UserId INTEGER NOT NULL
+                   UNIQUE
+);
+
+CREATE TABLE IF NOT EXISTS UserSubscribedChannels ( 
+    UserId    INTEGER NOT NULL
+                      REFERENCES Users ( Id ) ON DELETE CASCADE,
+    ChannelId INTEGER NOT NULL
+                      REFERENCES Channels ( Id ) ON DELETE CASCADE,
+    UNIQUE ( UserId, ChannelId ) 
+);

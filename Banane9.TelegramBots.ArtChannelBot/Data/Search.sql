@@ -3,12 +3,12 @@ SELECT
     Channels.ChannelId AS ChannelId,
     Channels.Name AS ChannelName,
     Art.Id AS ArtId,
-    Art.MessageId AS MessageId,
     Art.FileId AS FileId,
     Art.Name AS ArtName
 FROM Art
 INNER JOIN Channels ON Channels.Id = Art.ChannelId
-WHERE EXISTS
+WHERE Art.Name LIKE @term
+OR EXISTS
     (SELECT ArtId FROM ArtTags WHERE
         ArtId = Art.Id AND
         EXISTS (SELECT * FROM Tags
