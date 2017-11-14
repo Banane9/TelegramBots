@@ -17,6 +17,7 @@ namespace Banane9.TelegramBots.ArtChannelBot.Data
         private readonly SQLiteCommand addChannelCommand;
         private readonly SQLiteCommand addCharacterArtCommand;
         private readonly SQLiteCommand addCharacterCommand;
+        private readonly SQLiteCommand addSubscriptionCommand;
         private readonly SQLiteCommand addTagCommand;
         private readonly SQLiteCommand addUserCommand;
         private readonly SQLiteCommand clearArtSearchResultsCommand;
@@ -30,6 +31,7 @@ namespace Banane9.TelegramBots.ArtChannelBot.Data
         private readonly SQLiteCommand getUserCommand;
         private readonly SQLiteCommand prepareArtSearchCommand;
         private readonly SQLiteCommand removeArtCommand;
+        private readonly SQLiteCommand removeSubscriptionCommand;
         private readonly SQLiteCommand searchCommand;
         private readonly SQLiteCommand updateArtCommand;
 
@@ -47,7 +49,7 @@ namespace Banane9.TelegramBots.ArtChannelBot.Data
             }
 
             prepareArtSearchCommand = connection.CreateCommand();
-            prepareArtSearchCommand.CommandText = "CREATE TEMPORARY TABLE IF NOT EXISTS ArtSearchResults (ChannelId INTEGER NOT NULL, ChannelName CHAR NOT NULL, ArtId INTEGER NOT NULL, MessageId INTEGER NOT NULL, FileId CHAR NOT NULL, ArtName CHAR NOT NULL);";
+            prepareArtSearchCommand.CommandText = "CREATE TEMPORARY TABLE IF NOT EXISTS ArtSearchResults (ChannelId INTEGER NOT NULL, ChannelName CHAR NOT NULL, ChannelJoinLink CHAR NOT NULL, ArtId INTEGER NOT NULL, FileId CHAR NOT NULL, ArtName CHAR NOT NULL);";
 
             searchCommand = connection.CreateCommand();
             using (var asmStream = Assembly.GetExecutingAssembly().GetManifestResourceStream("Banane9.TelegramBots.ArtChannelBot.Data.Search.sql"))
@@ -55,7 +57,7 @@ namespace Banane9.TelegramBots.ArtChannelBot.Data
                 searchCommand.CommandText = reader.ReadToEnd();
 
             getArtSearchResultsCommand = connection.CreateCommand();
-            getArtSearchResultsCommand.CommandText = "SELECT * FROM ArtSearchResults GROUP BY ArtSearchResults.ArtId ORDER BY COUNT(ArtSearchResults.ArtId) DESC";
+            getArtSearchResultsCommand.CommandText = "SELECT * FROM ArtSearchResults GROUP BY ArtSearchResults.ArtId ORDER BY COUNT(ArtSearchResults.ArtId) DESC LIMIT 5";
 
             clearArtSearchResultsCommand = connection.CreateCommand();
             clearArtSearchResultsCommand.CommandText = "DROP TABLE IF EXISTS ArtSearchResults";
@@ -64,7 +66,7 @@ namespace Banane9.TelegramBots.ArtChannelBot.Data
             getChannelCommand.CommandText = "SELECT * FROM Channels WHERE (Channels.ChannelId = @channelId)";
 
             addChannelCommand = connection.CreateCommand();
-            addChannelCommand.CommandText = "INSERT OR IGNORE INTO Channels (Name, ChannelId) VALUES (@name, @channelId)";
+            addChannelCommand.CommandText = "INSERT OR IGNORE INTO Channels (Name, ChannelId, JoinLink) VALUES (@name, @channelId, @joinLink)";
 
             getTagCommand = connection.CreateCommand();
             getTagCommand.CommandText = "SELECT * FROM Tags WHERE (Tags.Name = @name)";
@@ -109,7 +111,13 @@ namespace Banane9.TelegramBots.ArtChannelBot.Data
             getUserCommand.CommandText = "SELECT * FROM Users WHERE (Users.UserId = @userId)";
 
             addUserCommand = connection.CreateCommand();
-            addUserCommand.CommandText = "INSERT OR IGNORE INTO Users (UserId, ChatId) VALUES (@userId, @chatId)";
+            addUserCommand.CommandText = "INSERT OR IGNORE INTO Users (UserId) VALUES (@userId)";
+
+            addSubscriptionCommand = connection.CreateCommand();
+            addSubscriptionCommand.CommandText = "INSERT OR IGNORE INTO UserSubscribedChannels (UserId, ChannelId) VALUES (@userId, @channelId)";
+
+            removeSubscriptionCommand = connection.CreateCommand();
+            removeSubscriptionCommand.CommandText = "DELETE FROM UserSubscribedChannels WHERE (UserSubscribedChannels.UserId = @userId) AND (UserSubscribedChannels.ChannelId = @channelId)";
         }
 
         public bool AddArt(Channel channel, Message fileMessage, Message detailMessage = null)
@@ -143,7 +151,19 @@ namespace Banane9.TelegramBots.ArtChannelBot.Data
             return true;
         }
 
-        public Channel GetChannel(Chat chat)
+        public bool AddSubscription(User user, Channel channel)
+        {
+            lock (connection)
+            {
+                addSubscriptionCommand.Reset();
+                addSubscriptionCommand.Parameters.AddWithValue("@userId", user.InternalId);
+                addSubscriptionCommand.Parameters.AddWithValue("@channelId", channel.InternalId);
+
+                return addSubscriptionCommand.ExecuteNonQuery() > 0;
+            }
+        }
+
+        public Channel GetChannel(Chat chat, Func<Chat, string> getJoinLink)
         {
             lock (connection)
             {
@@ -152,14 +172,21 @@ namespace Banane9.TelegramBots.ArtChannelBot.Data
 
                 var reader = getChannelCommand.ExecuteReader();
                 if (reader.Read())
-                    return new Channel(reader);
+                {
+                    var channel = new Channel(reader);
+                    reader.Close();
+                    return channel;
+                }
+
+                var joinLink = getJoinLink(chat);
 
                 addChannelCommand.Reset();
                 addChannelCommand.Parameters.AddWithValue("@name", chat.Title);
                 addChannelCommand.Parameters.AddWithValue("@channelId", chat.Id);
+                addChannelCommand.Parameters.AddWithValue("@joinLink", joinLink);
                 addChannelCommand.ExecuteNonQuery();
 
-                return new Channel(connection.LastInsertRowId, chat.Title, chat.Id);
+                return new Channel(connection.LastInsertRowId, chat.Title, chat.Id, joinLink);
             }
         }
 
@@ -172,7 +199,11 @@ namespace Banane9.TelegramBots.ArtChannelBot.Data
 
                 var reader = getUserCommand.ExecuteReader();
                 if (reader.Read())
-                    return new User(reader);
+                {
+                    var user = new User(reader);
+                    reader.Close();
+                    return user;
+                }
 
                 addUserCommand.Reset();
                 addUserCommand.Parameters.AddWithValue("@userId", userId);
@@ -182,12 +213,24 @@ namespace Banane9.TelegramBots.ArtChannelBot.Data
             }
         }
 
-        public IEnumerable<ArtSearchResult> SearchArt(IEnumerable<string> terms)
+        public void RemoveSubscription(User user, Channel channel)
         {
-            SQLiteDataReader reader;
+            lock (connection)
+            {
+                removeSubscriptionCommand.Reset();
+                removeSubscriptionCommand.Parameters.AddWithValue("@userId", user.InternalId);
+                removeSubscriptionCommand.Parameters.AddWithValue("@channelId", channel.InternalId);
 
+                removeSubscriptionCommand.ExecuteNonQuery();
+            }
+        }
+
+        public IEnumerable<ArtSearchResult> SearchArt(User user, IEnumerable<string> terms)
+        {
             lock (clearArtSearchResultsCommand)
             {
+                SQLiteDataReader reader;
+
                 lock (connection)
                 {
                     clearArtSearchResultsCommand.ExecuteNonQuery();
@@ -196,6 +239,7 @@ namespace Banane9.TelegramBots.ArtChannelBot.Data
                     foreach (var term in terms)
                     {
                         searchCommand.Reset();
+                        searchCommand.Parameters.AddWithValue("@userId", user.InternalId);
                         searchCommand.Parameters.AddWithValue("@term", term + "%");
                         searchCommand.ExecuteNonQuery();
                     }
@@ -208,6 +252,8 @@ namespace Banane9.TelegramBots.ArtChannelBot.Data
                 {
                     yield return new ArtSearchResult(reader);
                 }
+
+                reader.Close();
             }
         }
 
@@ -300,10 +346,11 @@ namespace Banane9.TelegramBots.ArtChannelBot.Data
         {
             getCommand.Reset();
             getCommand.Parameters.AddWithValue("@name", name);
-            var reader = getCommand.ExecuteReader();
 
-            if (reader.Read())
-                return reader.GetInt64(0);
+            var id = getCommand.ExecuteScalar();
+
+            if (id != null)
+                return (long)id;
 
             addCommand.Reset();
             addCommand.Parameters.AddWithValue("@name", name);

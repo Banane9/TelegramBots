@@ -14,6 +14,7 @@ namespace Banane9.TelegramBots.ArtChannelBot.Data
         public string ArtName { get; private set; }
         public long ChannelId { get; private set; }
 
+        public string ChannelJoinLink { get; private set; }
         public string ChannelName { get; private set; }
         public string FileId { get; private set; }
         public int MessageId { get; private set; }
@@ -22,8 +23,8 @@ namespace Banane9.TelegramBots.ArtChannelBot.Data
         {
             ChannelId = reader.GetInt64(0);
             ChannelName = reader.GetString(1);
-            ArtId = reader.GetInt64(2);
-            MessageId = reader.GetInt32(3);
+            ChannelJoinLink = reader.GetString(2);
+            ArtId = reader.GetInt64(3);
             FileId = reader.GetString(4);
             ArtName = reader.GetString(5);
         }

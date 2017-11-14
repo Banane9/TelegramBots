@@ -5,6 +5,8 @@ CREATE TABLE IF NOT EXISTS Channels (
     Name      CHAR( 255 )  NOT NULL
                            COLLATE 'NOCASE',
     ChannelId INTEGER      NOT NULL
+                           UNIQUE,
+    JoinLink  CHAR         NOT NULL
                            UNIQUE 
 );
 
