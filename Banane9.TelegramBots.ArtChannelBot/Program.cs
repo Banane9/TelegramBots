@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Collections.Generic;
+using System.Threading;
 
 namespace Banane9.TelegramBots.ArtChannelBot
 {
@@ -13,8 +14,17 @@ namespace Banane9.TelegramBots.ArtChannelBot
             Console.Title = bot.Self.FirstName + bot.Self.LastName;
 
             bot.Start();
-            while (Console.ReadLine() != "quit") ;
-            bot.Stop();
+
+            if (args.Length < 1 && args[0] != "-d")
+            {
+                Console.WriteLine("Write quit to stop");
+                while (Console.ReadLine() != "quit") ;
+                bot.Stop();
+                return;
+            }
+
+            while (true)
+                Thread.Sleep(int.MaxValue);
         }
     }
 }
