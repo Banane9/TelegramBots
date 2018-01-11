@@ -52,14 +52,12 @@ namespace Banane9.TelegramBots.ArtChannelBot
             var query = e.InlineQuery.Query.Split(',').Where(t => !string.IsNullOrWhiteSpace(t)).Select(t => t.Trim());
             var x = 0;
 
-            var result = database.SearchArt(user, query).Select(async artResult => new InlineQueryResultCachedPhoto
+            var result = database.SearchArt(user, query).Select(artResult => new InlineQueryResultCachedPhoto((++x).ToString(), artResult.FileId)
             {
-                Id = (++x).ToString(),
-                FileId = artResult.FileId,
                 Title = artResult.ArtName,
                 Description = $"{artResult.ArtName} from {artResult.ChannelName}",
                 Caption = $"{artResult.ArtName}\r\n{artResult.ChannelJoinLink}"
-            }).Select(t => t.Result).ToArray();
+            }).ToArray();
 
             await client.AnswerInlineQueryAsync(e.InlineQuery.Id, result, isPersonal: true, cacheTime: 60);
         }
@@ -70,7 +68,7 @@ namespace Banane9.TelegramBots.ArtChannelBot
             var user = database.GetUser(e.Message.From.Id, e.Message.Chat.Id);
             var forwardFrom = e.Message.ForwardFromChat;
 
-            if (forwardFrom == null && e.Message.Type == MessageType.TextMessage && e.Message.Text.StartsWith("/"))
+            if (forwardFrom == null && e.Message.Type == MessageType.Text && e.Message.Text.StartsWith("/"))
             {
                 handleCommand(e.Message);
                 return;
@@ -94,7 +92,7 @@ namespace Banane9.TelegramBots.ArtChannelBot
                 return;
             }
 
-            if (forwardFrom != null && forwardFrom.Type == ChatType.Channel && e.Message.Type == MessageType.PhotoMessage)
+            if (forwardFrom != null && forwardFrom.Type == ChatType.Channel && e.Message.Type == MessageType.Photo)
             {
                 var admins = await client.GetChatAdministratorsAsync(forwardFrom.Id);
                 if (!admins.Any(admin => admin.User.Id == user.UserId))
@@ -117,7 +115,7 @@ namespace Banane9.TelegramBots.ArtChannelBot
                 return;
             }
 
-            if (e.Message.Type != MessageType.TextMessage || !lastUserMessage.ContainsKey(user) || lastUserMessage[user] == null || string.IsNullOrWhiteSpace(e.Message.Text))
+            if (e.Message.Type != MessageType.Text || !lastUserMessage.ContainsKey(user) || lastUserMessage[user] == null || string.IsNullOrWhiteSpace(e.Message.Text))
                 return;
 
             var lChannel = database.GetChannel(lastUserMessage[user].ForwardFromChat, getJoinLink);
@@ -134,7 +132,7 @@ namespace Banane9.TelegramBots.ArtChannelBot
 
         private void client_OnMessageEdited(object sender, MessageEventArgs e)
         {
-            if (e.Message.Type != MessageType.TextMessage)
+            if (e.Message.Type != MessageType.Text)
                 return;
 
             database.UpdateArt(e.Message);
@@ -150,7 +148,7 @@ namespace Banane9.TelegramBots.ArtChannelBot
                 case UpdateType.ChannelPost:
                     var post = e.Update.ChannelPost;
 
-                    if (post.Type != MessageType.PhotoMessage)
+                    if (post.Type != MessageType.Photo)
                         break;
 
                     var channel = database.GetChannel(post.Chat, getJoinLink);
@@ -160,7 +158,7 @@ namespace Banane9.TelegramBots.ArtChannelBot
                 case UpdateType.EditedChannelPost:
                     var ePost = e.Update.EditedChannelPost;
 
-                    if (ePost.Type != MessageType.PhotoMessage)
+                    if (ePost.Type != MessageType.Photo)
                         break;
 
                     var uChannel = database.GetChannel(ePost.Chat, getJoinLink);

@@ -7,7 +7,7 @@ namespace Banane9.TelegramBots.ArtChannelBot
 {
     internal class Program
     {
-        private static void Main(string[] args)
+        public static void Main(string[] args)
         {
             var bot = new ArtChannelBot("471628940:AAES_fQeiL9UTmzlkJkAWbdgMKuzLyxiEYo");
 
@@ -15,7 +15,7 @@ namespace Banane9.TelegramBots.ArtChannelBot
 
             bot.Start();
 
-            if (args.Length < 1 && args[0] != "-d")
+            if (args.Length < 1 || args[0] != "-d")
             {
                 Console.WriteLine("Write quit to stop");
                 while (Console.ReadLine() != "quit") ;
