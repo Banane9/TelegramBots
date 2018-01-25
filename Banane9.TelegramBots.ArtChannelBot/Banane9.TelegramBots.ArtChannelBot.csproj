@@ -85,6 +85,12 @@
   <ItemGroup>
     <EmbeddedResource Include="Data\Search.sql" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\TelegramBotLib\TelegramBotLib.csproj">
+      <Project>{975F539A-727B-48ED-B8DE-86037EBED42E}</Project>
+      <Name>TelegramBotLib</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="..\packages\NETStandard.Library.2.0.1\build\NETStandard.Library.targets" Condition="Exists('..\packages\NETStandard.Library.2.0.1\build\NETStandard.Library.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
