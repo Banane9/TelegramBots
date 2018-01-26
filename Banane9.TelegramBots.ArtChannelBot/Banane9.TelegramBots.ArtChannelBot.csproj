@@ -76,7 +76,6 @@
     <None Include="App.config" />
     <None Include="ArtChanDB-model.db3" />
     <None Include="ArtDB.db3" />
-    <None Include="libSQLite.Interop.so" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
