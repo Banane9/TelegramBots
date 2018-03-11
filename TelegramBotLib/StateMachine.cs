@@ -13,10 +13,11 @@ namespace TelegramBotLib
 
         public Type StateType { get; private set; }
 
-        public StateMachine(object startState = null, Type startType = null)
+        public StateMachine(object startState)
         {
-            State = startState;
-            StateType = startState?.GetType() ?? startType;
+            State = startState ?? throw new ArgumentNullException(nameof(startState), "Start State can't be null!");
+
+            StateType = startState.GetType();
         }
 
         public void AddTransition<TFromState, TWith, TToState>(Func<TFromState, TWith, bool> canTransition, Func<TFromState, TWith, TToState> transition)
@@ -29,16 +30,11 @@ namespace TelegramBotLib
             transitions[fromStateType].Add(new Transition(fromStateType, typeof(TWith), typeof(TToState), canTransition.Method, transition.Method));
         }
 
-        public void AddTransition(Type fromStateType, Type withType, Type toStateType, Func<object, object, bool> canTransition, Func<object, object, object> transition)
-        {
-            if (!transitions.ContainsKey(fromStateType))
-                transitions.Add(fromStateType, new List<Transition>());
-
-            transitions[fromStateType].Add(new Transition(fromStateType, withType, toStateType, canTransition.Method, transition.Method));
-        }
-
         public bool TryTransitioning(object with)
         {
+            if (with == null)
+                throw new ArgumentNullException(nameof(with), "With object can't be null!");
+
             if (!transitions.ContainsKey(StateType))
                 return false;
 
@@ -81,12 +77,12 @@ namespace TelegramBotLib
 
             public object DoTransition(object state, object with)
             {
-                return transitionMethod.Invoke(null, state, with);
+                return transitionMethod.Invoke(null, state, with) ?? throw new InvalidOperationException("New State can't be null!");
             }
 
             public bool HasCorrectTypes(object state, object with)
             {
-                return state?.GetType() == FromStateType && with?.GetType() == WithType;
+                return state.GetType() == FromStateType && with.GetType() == WithType;
             }
         }
     }

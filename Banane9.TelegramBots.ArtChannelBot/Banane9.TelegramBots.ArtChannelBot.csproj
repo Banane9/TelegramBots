@@ -64,6 +64,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ArtChannelBot.cs" />
+    <Compile Include="BotStates.cs" />
     <Compile Include="Data\ArtDb.cs" />
     <Compile Include="Data\ArtSearchResult.cs" />
     <Compile Include="Data\ArtworkDetails.cs" />
