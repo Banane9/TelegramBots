@@ -20,6 +20,11 @@ namespace TelegramBotLib
             StateType = startState.GetType();
         }
 
+        private StateMachine(object startState, Dictionary<Type, List<Transition>> transitions) : this(startState)
+        {
+            this.transitions = transitions;
+        }
+
         public void AddTransition<TFromState, TWith, TToState>(Func<TFromState, TWith, bool> canTransition, Func<TFromState, TWith, TToState> transition)
         {
             var fromStateType = typeof(TFromState);
@@ -27,7 +32,20 @@ namespace TelegramBotLib
             if (!transitions.ContainsKey(fromStateType))
                 transitions.Add(fromStateType, new List<Transition>());
 
-            transitions[fromStateType].Add(new Transition(fromStateType, typeof(TWith), typeof(TToState), canTransition.Method, transition.Method));
+            var canTransitionTarget = new MethodTarget(canTransition.Method, canTransition.Target);
+            var transitionTarget = new MethodTarget(transition.Method, transition.Target);
+            transitions[fromStateType].Add(new Transition(fromStateType, typeof(TWith), typeof(TToState), canTransitionTarget, transitionTarget));
+        }
+
+        public StateMachine Copy()
+        {
+            return new StateMachine(State, transitions);
+        }
+
+        public void ForceState(object state)
+        {
+            State = state ?? throw new ArgumentNullException(nameof(state), "State can't be null!");
+            StateType = state.GetType();
         }
 
         public bool TryTransitioning(object with)
@@ -36,11 +54,12 @@ namespace TelegramBotLib
                 throw new ArgumentNullException(nameof(with), "With object can't be null!");
 
             if (!transitions.ContainsKey(StateType))
-                return false;
+                throw new InvalidOperationException("No Transitions have been added for the type of the current state!");
 
-            foreach (var transition in transitions[StateType])
+            var withType = with.GetType();
+            foreach (var transition in transitions[StateType].Where(t => t.WithType == withType))
             {
-                if (!transition.HasCorrectTypes(State, with) || !transition.CanTransition(State, with))
+                if (!transition.CanTransition(State, with))
                     continue;
 
                 State = transition.DoTransition(State, with);
@@ -52,32 +71,54 @@ namespace TelegramBotLib
             return false;
         }
 
+        private struct MethodTarget
+        {
+            public readonly MethodInfo Method;
+            public readonly object Target;
+
+            public MethodTarget(MethodInfo method, object target)
+            {
+                Method = method;
+                Target = target;
+            }
+
+            public T Invoke<T>(params object[] parameters)
+            {
+                return (T)Method.Invoke(Target, parameters);
+            }
+
+            public object Invoke(params object[] parameters)
+            {
+                return Method.Invoke(Target, parameters);
+            }
+        }
+
         private sealed class Transition
         {
-            private readonly MethodInfo canTransitionMethod;
-            private readonly MethodInfo transitionMethod;
+            private readonly MethodTarget canTransitionTarget;
+            private readonly MethodTarget transitionTarget;
             public Type FromStateType { get; }
             public Type ToStateType { get; }
             public Type WithType { get; }
 
-            public Transition(Type fromStateType, Type toStateType, Type withType, MethodInfo canTransitionMethod, MethodInfo transitionMethod)
+            public Transition(Type fromStateType, Type withType, Type toStateType, MethodTarget canTransitionTarget, MethodTarget transitionTarget)
             {
                 FromStateType = fromStateType;
                 WithType = withType;
                 ToStateType = toStateType;
 
-                this.canTransitionMethod = canTransitionMethod;
-                this.transitionMethod = transitionMethod;
+                this.canTransitionTarget = canTransitionTarget;
+                this.transitionTarget = transitionTarget;
             }
 
             public bool CanTransition(object state, object with)
             {
-                return canTransitionMethod.Invoke<bool>(null, state, with);
+                return canTransitionTarget.Invoke<bool>(state, with);
             }
 
             public object DoTransition(object state, object with)
             {
-                return transitionMethod.Invoke(null, state, with) ?? throw new InvalidOperationException("New State can't be null!");
+                return transitionTarget.Invoke(state, with) ?? throw new InvalidOperationException("New State can't be null!");
             }
 
             public bool HasCorrectTypes(object state, object with)

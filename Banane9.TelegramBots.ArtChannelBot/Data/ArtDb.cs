@@ -257,7 +257,7 @@ namespace Banane9.TelegramBots.ArtChannelBot.Data
             }
         }
 
-        public void UpdateArt(Message detailMessage, Message fileMessage = null)
+        public void UpdateArt(Message detailMessage, Func<Chat, string> getJoinLink, Message fileMessage = null)
         {
             var details = new ArtworkDetails(detailMessage.Caption ?? detailMessage.Text);
 
@@ -269,7 +269,11 @@ namespace Banane9.TelegramBots.ArtChannelBot.Data
 
                 var artIdObj = getArtIdByMessageCommand.ExecuteScalar();
                 if (artIdObj == null)
+                {
+                    AddArt(GetChannel(fileMessage?.Chat ?? detailMessage.Chat, getJoinLink), fileMessage ?? detailMessage, detailMessage);
+
                     return;
+                }
 
                 var artId = (long)artIdObj;
 
