@@ -34,9 +34,11 @@ namespace Banane9.TelegramBots.ArtChannelBot
             protoStateMachine.AddTransition<BasicState, Message, BasicState>(canDoSubUnsub, doSub);
             protoStateMachine.AddTransition<BasicState, Message, BasicState>(canDoSubUnsub, doUnsub);
             protoStateMachine.AddTransition<BasicState, Message, WaitingForArtDetails>(canAddArt, doAddArt);
+            protoStateMachine.AddTransition<WaitingForArtDetails, Message, WaitingForArtDetails>(canDoInvalidDetail, doInvalidDetail);
             protoStateMachine.AddTransition<WaitingForArtDetails, Message, BasicState>(canSkip, doSkip);
             protoStateMachine.AddTransition<WaitingForArtDetails, Message, BasicState>(canCancel, doCancel);
             protoStateMachine.AddTransition<WaitingForArtDetails, Message, BasicState>(canAddDetails, doAddDetails);
+            protoStateMachine.AddTransition<BasicState, Message, BasicState>(canDoUnsupported, doUnsupported);
         }
 
         public void Start()
@@ -165,7 +167,14 @@ namespace Banane9.TelegramBots.ArtChannelBot
 
         private bool canCancel(WaitingForArtDetails state, Message message)
         {
-            return message.Type == MessageType.Text && message.Text.ToLowerInvariant() == "/cancel";
+            return message.Text.ToLowerInvariant() == "/cancel";
+        }
+
+        private bool canDoInvalidDetail(WaitingForArtDetails state, Message message)
+        {
+            return message.Type != MessageType.Text || string.IsNullOrWhiteSpace(message.Text)
+                 || (message.Text.ToLowerInvariant() == "/skip" && string.IsNullOrWhiteSpace(state.FileMessage.Caption))
+                 || message.Text.ToLowerInvariant() != "/cancel";
         }
 
         private bool canDoStandardCommand(BasicState state, Message message)
@@ -198,18 +207,14 @@ namespace Banane9.TelegramBots.ArtChannelBot
             return message.Type == MessageType.Text && state == BasicState.WaitingForCommands && message.Text.ToLowerInvariant() == "/unsubscribe";
         }
 
+        private bool canDoUnsupported(BasicState _, Message message)
+        {
+            return message.Type != MessageType.Text || message.ForwardFromChat == null;
+        }
+
         private bool canSkip(WaitingForArtDetails state, Message message)
         {
-            if (message.Type != MessageType.Text || message.Text.ToLowerInvariant() != "/skip")
-                return false;
-
-            if (string.IsNullOrWhiteSpace(state.FileMessage.Caption))
-            {
-                client.SendTextMessageAsync(message.From.Id, "The Image must have a caption to skip the detail message, use /cancel instead!");
-                return false;
-            }
-
-            return true;
+            return message.Text.ToLowerInvariant() == "/skip";
         }
 
         private WaitingForArtDetails doAddArt(BasicState state, Message message)
@@ -229,9 +234,21 @@ namespace Banane9.TelegramBots.ArtChannelBot
             return BasicState.WaitingForCommands;
         }
 
-        private BasicState doCancel(WaitingForArtDetails _, Message __)
+        private BasicState doCancel(WaitingForArtDetails _, Message message)
         {
+            client.SendTextMessageAsync(message.From.Id, "Canceled.");
+
             return BasicState.WaitingForCommands;
+        }
+
+        private WaitingForArtDetails doInvalidDetail(WaitingForArtDetails state, Message message)
+        {
+            if (message.Text?.ToLowerInvariant() == "/skip")
+                client.SendTextMessageAsync(message.From.Id, "The Image must have a caption to skip the detail message, use /cancel instead!");
+            else
+                client.SendTextMessageAsync(message.From.Id, "Please send a text message to add details, or write /skip or /cancel\r\n/skip will add the art as-is.\r\n/cancel will stop the process of adding it.");
+
+            return state;
         }
 
         private BasicState doSkip(WaitingForArtDetails state, Message message)
@@ -302,6 +319,13 @@ namespace Banane9.TelegramBots.ArtChannelBot
             client.SendTextMessageAsync(message.From.Id, unsubscribeText);
 
             return BasicState.WaitingForUnsub;
+        }
+
+        private BasicState doUnsupported(BasicState _, Message message)
+        {
+            client.SendTextMessageAsync(message.From.Id, "Not supported! Canceling.");
+
+            return BasicState.WaitingForCommands;
         }
 
         private string getJoinLink(Chat channel)
