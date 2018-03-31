@@ -15,6 +15,14 @@ namespace TelegramBotLib
         protected readonly TelegramBotClient client;
         private readonly Lazy<User> self;
 
+        private InlineQueryTable inlineQueryTable = new InlineQueryTable();
+
+        public TimeSpan InlineQueryTimeout
+        {
+            get { return inlineQueryTable.DefaultTimeout; }
+            set { inlineQueryTable.DefaultTimeout = value; }
+        }
+
         public User Self
         {
             get { return self.Value; }
@@ -34,6 +42,9 @@ namespace TelegramBotLib
             client.OnUpdate += client_OnUpdate;
         }
 
+        protected virtual void InlineQueryTask(InlineQuery inlineQuery)
+        { }
+
         protected virtual void OnApiResponseReceived(ApiResponseEventArgs apiResponse)
         { }
 
@@ -47,10 +58,14 @@ namespace TelegramBotLib
         { }
 
         protected virtual void OnInlineQuery(InlineQuery inlineQuery)
-        { }
+        {
+            inlineQueryTable.Run(inlineQuery.From.Id, () => InlineQueryTask(inlineQuery));
+        }
 
         protected virtual void OnInlineResultChosen(ChosenInlineResult inlineResult)
-        { }
+        {
+            inlineQueryTable.Cancel(inlineResult.From.Id);
+        }
 
         protected virtual void OnMakingApiRequest(ApiRequestEventArgs apiRequest)
         { }

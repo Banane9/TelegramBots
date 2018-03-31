@@ -51,8 +51,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="MethodInfoExtension.cs" />
+    <Compile Include="IEnumerableExtension.cs" />
     <Compile Include="StateMachine.cs" />
+    <Compile Include="InlineQueryTable.cs" />
     <Compile Include="TelegramBot.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
