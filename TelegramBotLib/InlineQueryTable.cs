@@ -2,46 +2,62 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
+using Telegram.Bot;
+using Telegram.Bot.Types;
+using Telegram.Bot.Types.InlineQueryResults;
 
 namespace TelegramBotLib
 {
     public class InlineQueryTable
     {
         private readonly Timer cleanupTimer;
-        private readonly Dictionary<int, TaskEntry> dictionary = new Dictionary<int, TaskEntry>();
-        public TimeSpan DefaultTimeout { get; set; } = TimeSpan.FromSeconds(10);
+        private readonly TelegramBotClient client;
+        private readonly Dictionary<int, QueryEntry> dictionary = new Dictionary<int, QueryEntry>();
+        private readonly Func<InlineQuery, IEnumerable<InlineQueryResultBase>> getResults;
+        public int CacheTime { get; set; }
+        public bool IsPersonal { get; set; }
+        public int PageSize { get; set; }
 
-        public InlineQueryTable()
+        public InlineQueryTable(TelegramBotClient client, Func<InlineQuery, IEnumerable<InlineQueryResultBase>> getResults,
+            int pageSize = 5, bool isPersonal = false, int cacheTime = 300)
         {
+            this.client = client;
+            this.getResults = getResults;
+
+            PageSize = pageSize;
+            IsPersonal = isPersonal;
+            CacheTime = cacheTime;
+
             cleanupTimer = new Timer(cleanup, null, TimeSpan.FromSeconds(0), TimeSpan.FromMinutes(5));
         }
 
-        public void Cancel(int user)
+        public void Add(InlineQuery query)
         {
             lock (dictionary)
             {
-                if (dictionary.ContainsKey(user))
-                    dictionary[user].Cancel();
+                if (!int.TryParse(query.Offset, out int offset))
+                    offset = 0;
+
+                dictionary[query.From.Id] = new QueryEntry(query.Query, getResults(query), offset);
             }
         }
 
-        public void Run(int user, Action task)
+        public void Query(InlineQuery query)
         {
-            RunFor(user, task, DefaultTimeout);
+            var user = query.From.Id;
+
+            if (!dictionary.ContainsKey(user) || dictionary[user].Query != query.Query)
+                Add(query);
+
+            var resultChunk = dictionary[user].GetNext(PageSize);
+            client.AnswerInlineQueryAsync(query.Id, resultChunk, CacheTime, IsPersonal, dictionary[user].Offset.ToString());
         }
 
-        public void RunFor(int user, Action task, TimeSpan timeout)
+        public void Remove(int user)
         {
             lock (dictionary)
             {
-                if (dictionary.ContainsKey(user))
-                    dictionary[user].Cancel();
-
-                var taskEntry = new TaskEntry(task);
-                taskEntry.RunAndCancelAfter(timeout);
-
-                dictionary[user] = taskEntry;
+                dictionary.Remove(user);
             }
         }
 
@@ -59,30 +75,28 @@ namespace TelegramBotLib
             }
         }
 
-        private class TaskEntry
+        private class QueryEntry
         {
-            private readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
-            private readonly Task task;
+            private IEnumerable<InlineQueryResultBase> results;
+            public bool IsDone => !results.Any();
+            public int Offset { get; private set; }
+            public string Query { get; }
 
-            public bool IsDone
+            public QueryEntry(string query, IEnumerable<InlineQueryResultBase> results, int offset)
             {
-                get { return task.IsCompleted || task.IsCanceled; }
+                Query = query;
+                this.results = results.Skip(offset);
+                Offset = offset;
             }
 
-            public TaskEntry(Action task)
+            public IEnumerable<InlineQueryResultBase> GetNext(int count)
             {
-                this.task = new Task(task, cancellationTokenSource.Token);
-            }
+                var result = results.Take(count);
 
-            public void Cancel()
-            {
-                cancellationTokenSource.Cancel();
-            }
+                results = results.Skip(count);
+                Offset += count;
 
-            public void RunAndCancelAfter(TimeSpan timeSpan)
-            {
-                task.Start();
-                cancellationTokenSource.CancelAfter(timeSpan);
+                return result;
             }
         }
     }

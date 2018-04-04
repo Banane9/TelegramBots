@@ -57,7 +57,7 @@ namespace Banane9.TelegramBots.ArtChannelBot.Data
                 searchCommand.CommandText = reader.ReadToEnd();
 
             getArtSearchResultsCommand = connection.CreateCommand();
-            getArtSearchResultsCommand.CommandText = "SELECT * FROM ArtSearchResults GROUP BY ArtSearchResults.ArtId ORDER BY COUNT(ArtSearchResults.ArtId) DESC LIMIT 5";
+            getArtSearchResultsCommand.CommandText = "SELECT * FROM ArtSearchResults GROUP BY ArtSearchResults.ArtId ORDER BY COUNT(ArtSearchResults.ArtId) DESC";
 
             clearArtSearchResultsCommand = connection.CreateCommand();
             clearArtSearchResultsCommand.CommandText = "DROP TABLE IF EXISTS ArtSearchResults";
@@ -225,7 +225,7 @@ namespace Banane9.TelegramBots.ArtChannelBot.Data
             }
         }
 
-        public IEnumerable<ArtSearchResult> SearchArt(User user, IEnumerable<string> terms)
+        public ArtSearchResult[] SearchArt(User user, IEnumerable<string> terms)
         {
             lock (clearArtSearchResultsCommand)
             {
@@ -248,12 +248,15 @@ namespace Banane9.TelegramBots.ArtChannelBot.Data
                     reader = getArtSearchResultsCommand.ExecuteReader();
                 }
 
+                var results = new List<ArtSearchResult>();
                 while (reader.Read())
                 {
-                    yield return new ArtSearchResult(reader);
+                    results.Add(new ArtSearchResult(reader));
                 }
 
                 reader.Close();
+
+                return results.ToArray();
             }
         }
 

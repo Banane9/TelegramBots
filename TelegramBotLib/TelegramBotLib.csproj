@@ -52,6 +52,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="IEnumerableExtension.cs" />
+    <None Include="TaskTable.cs" />
     <Compile Include="StateMachine.cs" />
     <Compile Include="InlineQueryTable.cs" />
     <Compile Include="TelegramBot.cs" />

@@ -1,11 +1,15 @@
 ﻿using System;
 using System.Linq;
 using System.Collections.Generic;
+
+using System.Linq;
+
 using Telegram.Bot;
 using Telegram.Bot.Args;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+using Telegram.Bot.Types.InlineQueryResults;
 using Telegram.Bot.Types.Payments;
 
 namespace TelegramBotLib
@@ -13,15 +17,8 @@ namespace TelegramBotLib
     public abstract class TelegramBot
     {
         protected readonly TelegramBotClient client;
+        private readonly InlineQueryTable inlineQueryTable;
         private readonly Lazy<User> self;
-
-        private InlineQueryTable inlineQueryTable = new InlineQueryTable();
-
-        public TimeSpan InlineQueryTimeout
-        {
-            get { return inlineQueryTable.DefaultTimeout; }
-            set { inlineQueryTable.DefaultTimeout = value; }
-        }
 
         public User Self
         {
@@ -33,6 +30,7 @@ namespace TelegramBotLib
             client = new TelegramBotClient(botToken);
 
             self = new Lazy<User>(() => client.GetMeAsync().Result);
+            inlineQueryTable = new InlineQueryTable(client, GetInlineQueryResults);
 
             client.ApiResponseReceived += (_, apiResponse) => OnApiResponseReceived(apiResponse);
             client.MakingApiRequest += (_, apiRequest) => OnMakingApiRequest(apiRequest);
@@ -42,8 +40,10 @@ namespace TelegramBotLib
             client.OnUpdate += client_OnUpdate;
         }
 
-        protected virtual void InlineQueryTask(InlineQuery inlineQuery)
-        { }
+        protected virtual IEnumerable<InlineQueryResultBase> GetInlineQueryResults(InlineQuery inlineQuery)
+        {
+            return Enumerable.Empty<InlineQueryResultBase>();
+        }
 
         protected virtual void OnApiResponseReceived(ApiResponseEventArgs apiResponse)
         { }
@@ -59,12 +59,12 @@ namespace TelegramBotLib
 
         protected virtual void OnInlineQuery(InlineQuery inlineQuery)
         {
-            inlineQueryTable.Run(inlineQuery.From.Id, () => InlineQueryTask(inlineQuery));
+            inlineQueryTable.Query(inlineQuery);
         }
 
         protected virtual void OnInlineResultChosen(ChosenInlineResult inlineResult)
         {
-            inlineQueryTable.Cancel(inlineResult.From.Id);
+            inlineQueryTable.Remove(inlineResult.From.Id);
         }
 
         protected virtual void OnMakingApiRequest(ApiRequestEventArgs apiRequest)

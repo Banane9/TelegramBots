@@ -51,24 +51,19 @@ namespace Banane9.TelegramBots.ArtChannelBot
             client.StopReceiving();
         }
 
-        protected async override void InlineQueryTask(InlineQuery inlineQuery)
+        protected override IEnumerable<InlineQueryResultBase> GetInlineQueryResults(InlineQuery inlineQuery)
         {
-            Console.WriteLine("Query: " + inlineQuery.Query);
-
             var user = database.GetUser(inlineQuery.From.Id, inlineQuery.From.Id);
             var query = inlineQuery.Query.Split(',').Where(t => !string.IsNullOrWhiteSpace(t)).Select(t => t.Trim());
             var x = 0;
 
-            var result = database.SearchArt(user, query).ToArray()
+            return database.SearchArt(user, query)
                 .Select(artResult => new InlineQueryResultCachedPhoto((++x).ToString(), artResult.FileId)
                 {
                     Title = artResult.ArtName,
                     Description = $"{artResult.ArtName} from {artResult.ChannelName}",
                     Caption = $"{artResult.ArtName}\r\n{artResult.ChannelJoinLink}"
                 });
-
-            foreach (var resultChunk in result.Chunk(3))
-                await client.AnswerInlineQueryAsync(inlineQuery.Id, resultChunk, cacheTime: 60, isPersonal: true);
         }
 
         protected override void OnChannelPost(Message channelPost)
@@ -109,6 +104,13 @@ namespace Banane9.TelegramBots.ArtChannelBot
 
             if (editedChannelPost.From != null)
                 client.SendTextMessageAsync(editedChannelPost.From.Id, $"**{editedChannelPost.Chat.Title}** Changed the details to reflect the new caption.", ParseMode.Markdown);
+        }
+
+        protected override void OnInlineQuery(InlineQuery inlineQuery)
+        {
+            Console.WriteLine($"Query {inlineQuery.Id}: {inlineQuery.Query}");
+
+            base.OnInlineQuery(inlineQuery);
         }
 
         protected override void OnMessage(Message message)
