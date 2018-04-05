@@ -40,6 +40,16 @@ namespace TelegramBotLib
             client.OnUpdate += client_OnUpdate;
         }
 
+        public void Start()
+        {
+            client.StartReceiving();
+        }
+
+        public void Stop()
+        {
+            client.StopReceiving();
+        }
+
         protected virtual IEnumerable<InlineQueryResultBase> GetInlineQueryResults(InlineQuery inlineQuery)
         {
             return Enumerable.Empty<InlineQueryResultBase>();

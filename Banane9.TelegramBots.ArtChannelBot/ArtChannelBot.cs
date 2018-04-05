@@ -41,16 +41,6 @@ namespace Banane9.TelegramBots.ArtChannelBot
             protoStateMachine.AddTransition<BasicState, Message, BasicState>(canDoUnsupported, doUnsupported);
         }
 
-        public void Start()
-        {
-            client.StartReceiving();
-        }
-
-        public void Stop()
-        {
-            client.StopReceiving();
-        }
-
         protected override IEnumerable<InlineQueryResultBase> GetInlineQueryResults(InlineQuery inlineQuery)
         {
             var user = database.GetUser(inlineQuery.From.Id, inlineQuery.From.Id);
@@ -159,7 +149,7 @@ namespace Banane9.TelegramBots.ArtChannelBot
         private bool canAddDetails(WaitingForArtDetails _, Message message)
         {
             if (message.Type != MessageType.Text || string.IsNullOrWhiteSpace(message.Text))
-            {//add invalid detail message transition
+            {
                 var text = message.Text.ToLowerInvariant();
                 return text == "/skip" || text == "/cancel";
             }
