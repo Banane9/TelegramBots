@@ -28,7 +28,7 @@ namespace TelegramBotLib
             IsPersonal = isPersonal;
             CacheTime = cacheTime;
 
-            cleanupTimer = new Timer(cleanup, null, TimeSpan.FromSeconds(0), TimeSpan.FromMinutes(5));
+            cleanupTimer = new Timer(cleanup, null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
         }
 
         public void Add(InlineQuery query)

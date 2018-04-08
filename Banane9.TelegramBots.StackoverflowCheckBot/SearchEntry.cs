@@ -2,20 +2,21 @@
 using System.Linq;
 using System.Collections.Generic;
 using Newtonsoft.Json;
-using Telegram.Bot.Types;
 
 namespace Banane9.TelegramBots.StackoverflowCheck
 {
     [JsonObject(MemberSerialization = MemberSerialization.OptOut)]
     public sealed class SearchEntry
     {
-        public List<ChatId> Channels { get; private set; }
+        public List<string> Channels { get; private set; } = new List<string>();
         public DateTime LastCheck { get; set; }
         public string Search { get; private set; }
 
-        public SearchEntry(ChatId channel, string search, DateTime lastCheck)
+        public SearchEntry(string channel, string search, DateTime lastCheck)
         {
-            Channels = new List<ChatId> { channel };
+            if (channel != null)
+                Channels.Add(channel);
+
             Search = search;
             LastCheck = lastCheck;
         }

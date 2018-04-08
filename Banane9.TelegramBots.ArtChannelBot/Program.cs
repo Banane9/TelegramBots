@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Linq;
 using System.Collections.Generic;
+using System.Net;
+using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 
 namespace Banane9.TelegramBots.ArtChannelBot
@@ -9,6 +12,8 @@ namespace Banane9.TelegramBots.ArtChannelBot
     {
         public static void Main(string[] args)
         {
+            ServicePointManager.ServerCertificateValidationCallback = validateCertificate;
+
             var bot = new ArtChannelBot("471628940:AAES_fQeiL9UTmzlkJkAWbdgMKuzLyxiEYo");
 
             Console.Title = bot.Self.FirstName + bot.Self.LastName;
@@ -25,6 +30,11 @@ namespace Banane9.TelegramBots.ArtChannelBot
 
             while (true)
                 Thread.Sleep(int.MaxValue);
+        }
+
+        private static bool validateCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
+        {
+            return true;
         }
     }
 }
