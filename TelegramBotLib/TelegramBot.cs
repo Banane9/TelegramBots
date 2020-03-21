@@ -27,6 +27,7 @@ namespace TelegramBotLib
 
         public TelegramBot(string botToken)
         {
+            System.Net.ServicePointManager.SecurityProtocol = System.Net.SecurityProtocolType.Tls12;
             client = new TelegramBotClient(botToken);
 
             self = new Lazy<User>(() => client.GetMeAsync().Result);

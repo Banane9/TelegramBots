@@ -1,21 +1,15 @@
 ﻿using System;
-using System.Linq;
-using System.Collections.Generic;
-using System.Net.Security;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 
-namespace Banane9.TelegramBots.StackoverflowCheck
+namespace Banane9.TelegramBots.FranticGameBot
 {
     internal class Program
     {
-        public static void Main(string[] args)
+        private static void Main(string[] args)
         {
-            //ServicePointManager.ServerCertificateValidationCallback = validateCertificate;
-
             try
             {
-                var bot = new StackoverflowCheckBot("585936263:AAFnHPCnsBX6j4o-lecdOW5o-5R5eIRx1Yk", TimeSpan.FromMinutes(10));
+                var bot = new FranticGameBot("1135372298:AAF3qHz-DW2c1SCY4fjVAzqVOCHarrq5CWg");
 
                 bot.Start();
                 Console.Title = bot.Self.FirstName + bot.Self.LastName;
@@ -38,11 +32,6 @@ namespace Banane9.TelegramBots.StackoverflowCheck
             }
 
             Console.ReadLine();
-        }
-
-        private static bool validateCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
-        {
-            return true;
         }
     }
 }
