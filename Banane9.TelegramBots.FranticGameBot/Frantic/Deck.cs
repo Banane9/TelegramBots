@@ -8,6 +8,12 @@ namespace Banane9.TelegramBots.FranticGameBot.Frantic
     {
         private readonly static Random r = new Random();
 
+        public static void AddRange<T>(this HashSet<T> set, IEnumerable<T> collection)
+        {
+            foreach (var item in collection)
+                set.Add(item);
+        }
+
         public static void PushRange<T>(this Stack<T> stack, IEnumerable<T> collection)
         {
             foreach (var item in collection)

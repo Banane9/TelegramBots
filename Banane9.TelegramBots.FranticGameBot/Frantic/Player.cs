@@ -7,10 +7,17 @@ namespace Banane9.TelegramBots.FranticGameBot.Frantic
 {
     public class Player
     {
-        public HashSet<BlackCard> Hand { get; }
+        public HashSet<BlackCard> Hand { get; } = new HashSet<BlackCard>();
 
         public uint HandValue => (uint)Hand.Sum(card => card.Value);
+
         public string Name { get; }
-        public int Score { get; set; }
+
+        public int Score { get; set; } = 0;
+
+        public Player(string name)
+        {
+            Name = name;
+        }
     }
 }

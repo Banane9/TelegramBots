@@ -5,6 +5,11 @@ namespace Banane9.TelegramBots.FranticGameBot.Frantic.Choices
 {
     public sealed class ValueChoice : Choice
     {
-        public uint Value { get; set; } = 0;
+        public uint Value { get; }
+
+        public ValueChoice(uint value)
+        {
+            Value = value;
+        }
     }
 }

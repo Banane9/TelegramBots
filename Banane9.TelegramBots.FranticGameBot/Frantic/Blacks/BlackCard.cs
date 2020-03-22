@@ -20,7 +20,7 @@ namespace Banane9.TelegramBots.FranticGameBot.Frantic.Blacks
             return game.CurrentPlayer.Hand.Contains(this);
         }
 
-        public virtual void OnPlayed(FranticGame game, IEnumerable<IEnumerable<Choice>> playerChoices)
+        public virtual void OnPlayed(FranticGame game, IEnumerable<Choice> playerChoices)
         { }
     }
 }
