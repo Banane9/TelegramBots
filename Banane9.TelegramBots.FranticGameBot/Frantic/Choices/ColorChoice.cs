@@ -1,0 +1,10 @@
+﻿using System;
+using System.Collections.Generic;
+
+namespace Banane9.TelegramBots.FranticGameBot.Frantic.Choices
+{
+    public sealed class ColorChoice : Choice
+    {
+        public Color Color { get; set; } = Color.None;
+    }
+}
