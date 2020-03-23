@@ -38,12 +38,15 @@ namespace Banane9.TelegramBots.FranticGameBot
             Console.WriteLine(callbackQuery.Data);
             var split = callbackQuery.Data.Split(' ');
 
-            if (split.Length != 3 || !games.ContainsKey(split[0])
-                || games[split[0]].CurrentPlayer.Name != callbackQuery.From.Username
-                || !games[split[0]].WaitingChoices.Peek().Any(c => c.Name == split[1]))
+            if (split.Length != 3 || !games.ContainsKey(split[0]))
                 return;
 
-            games[split[0]].WaitingChoices.Dequeue();
+            var game = games[split[0]];
+            if (game.CurrentPlayer.Name != callbackQuery.From.Username
+             || !game.WaitingChoices.Peek().Any(c => c.Name == split[1]))
+                return;
+
+            game.WaitingChoices.Dequeue();
             Choice choice;
             switch (split[1])
             {
@@ -60,7 +63,7 @@ namespace Banane9.TelegramBots.FranticGameBot
                     break;
             }
 
-            games[split[0]].Choices.Add(choice);
+            game.Choices.Add(choice);
         }
 
         protected override void OnInlineQuery(InlineQuery inlineQuery)

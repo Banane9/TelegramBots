@@ -14,9 +14,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelegramBotLib", "TelegramB
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Banane9.TelegramBots.StackoverflowCheckBot", "Banane9.TelegramBots.StackoverflowCheckBot\Banane9.TelegramBots.StackoverflowCheckBot.csproj", "{3CE89DC0-2810-4258-8BE9-0B59D6575324}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StateMachine", "StateMachine\StateMachine.csproj", "{C8DAE4D7-3667-41D9-B54D-DAFF0AA187D5}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Banane9.TelegramBots.FranticGameBot", "Banane9.TelegramBots.FranticGameBot\Banane9.TelegramBots.FranticGameBot.csproj", "{68F801EC-7B0A-48BB-88A1-49CBC9A2282F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Banane9.TelegramBots.FranticGameBot", "Banane9.TelegramBots.FranticGameBot\Banane9.TelegramBots.FranticGameBot.csproj", "{68F801EC-7B0A-48BB-88A1-49CBC9A2282F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -36,10 +34,6 @@ Global
 		{3CE89DC0-2810-4258-8BE9-0B59D6575324}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3CE89DC0-2810-4258-8BE9-0B59D6575324}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3CE89DC0-2810-4258-8BE9-0B59D6575324}.Release|Any CPU.Build.0 = Release|Any CPU
-		{C8DAE4D7-3667-41D9-B54D-DAFF0AA187D5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{C8DAE4D7-3667-41D9-B54D-DAFF0AA187D5}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{C8DAE4D7-3667-41D9-B54D-DAFF0AA187D5}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{C8DAE4D7-3667-41D9-B54D-DAFF0AA187D5}.Release|Any CPU.Build.0 = Release|Any CPU
 		{68F801EC-7B0A-48BB-88A1-49CBC9A2282F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{68F801EC-7B0A-48BB-88A1-49CBC9A2282F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{68F801EC-7B0A-48BB-88A1-49CBC9A2282F}.Release|Any CPU.ActiveCfg = Release|Any CPU
